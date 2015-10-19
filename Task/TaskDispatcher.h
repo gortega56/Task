@@ -3,64 +3,93 @@
 #include <thread>
 #include <condition_variable>
 #include <mutex>
+#include <queue>
 
 namespace cliqCity
 {
 	namespace multicore
 	{
-		typedef std::condition_variable			Notifier;
+
+		typedef std::queue<Task*>				Queue;
+		typedef std::condition_variable			Signal;
 		typedef std::thread						Thread;
 		typedef std::mutex						Mutex;
-		typedef std::unique_lock<Mutex>			Lock;
+		typedef std::unique_lock<Mutex>			UniqueLock;
+		typedef std::lock_guard<Mutex>			ScopedLock;
 
 		template<class Allocator>
 		class TaskDispatcher
 		{
 		public:
-			Notifier	mTaskNotifier;
+			Queue		mTaskQueue;
+			Signal		mTaskSignal;
 			Mutex		mQueueLock;
-			Allocator*	mAllocator;
+			Mutex		mMemoryLock;
+			Allocator	mAllocator;
 			Thread*		mThreads;
 			uint8_t		mThreadCount;
-			uint32_t	mTaskCount;
-			bool		mTasksAvailable;
+			bool        mIsProcessingTasks;
+			void*		mMemory;
 
-			TaskDispatcher(Allocator* allocator, Thread* threads, uint8_t threadCount) : mAllocator(allocator), mThreads(threads), mThreadCount(threadCount)
+			TaskDispatcher(Thread* threads, uint8_t threadCount, void* memory, size_t size) : 
+				mAllocator(memory, reinterpret_cast<char*>(memory) + size, sizeof(Task)), 
+				mThreads(threads), 
+				mThreadCount(threadCount),
+				mIsProcessingTasks(false),
+				mMemory(memory)
 			{
 				
 			}
 
-			TaskDispatcher() : TaskDispatcher(nullptr, nullptr, 0)
+			TaskDispatcher() : TaskDispatcher(nullptr, 0, nullptr, 0)
 			{
-
+				
 			}
 
 			~TaskDispatcher()
 			{
-
+				Sync();
+				mThreads = nullptr;
 			}
 
 			void Start()
 			{
+				if (mIsProcessingTasks)
+				{
+					return;
+				}
+
+				mIsProcessingTasks = true;
 				for (int i = 0; i < mThreadCount; i++)
 				{
-					mThreads[i] = Thread::thread(WaitForAvailableTasks);
+					mThreads[i] = Thread::thread(&TaskDispatcher<Allocator>::ProcessTasks, this);
 				}
 			}
 
-			void SetAllocator(Allocator* allocator)
+			void Pause()
 			{
-				mAllocator = allocator;
+				mIsProcessingTasks = false;
+			}
+
+			void Sync()
+			{
+				for (int i = 0; i < mThreadCount; i++)
+				{
+					if (mThreads[i].joinable())
+					{
+						mThreads[i].join();
+					}
+				}
 			}
 
 			inline TaskID GetTaskID(Task* task) const
 			{
-				return task - reinterpret_cast<Task*>(mAllocator.Begin());
+				return TaskID(task - reinterpret_cast<Task*>(mMemory));
 			}
 
 			inline Task* GetTask(const TaskID& taskID) const
 			{
-				return reinterpret_cast<Task*>(mAllocator.Begin()) + taskID;
+				return reinterpret_cast<Task*>(mMemory) + taskID.mOffset;
 			}
 
 			TaskID AddTask(const TaskData& data, TaskKernel kernel)
@@ -74,17 +103,34 @@ namespace cliqCity
 				return GetTaskID(task);
 			}
 
-		private:
 			inline Task* AllocateTask()
 			{
-				Task* task = mAllocator.Allocate(sizeof(Task), alignof(Task), 0);
+				Task* task = nullptr;
+				{
+					ScopedLock lock(mMemoryLock);
+					task = reinterpret_cast<Task*>(mAllocator.Allocate());
+				}
+
 				return task;
+			}
+
+			inline void FreeTask(Task* task)
+			{
+				ScopedLock lock(mMemoryLock);
+				mAllocator.Free(task);
 			}
 
 			inline void QueueTask(Task* task)
 			{
-				mTasksAvailable = true;
-				mTaskNotifier.notify_all();
+				{
+					UniqueLock lock(mQueueLock);
+					mTaskQueue.push(task);
+				}
+
+				if (mIsProcessingTasks)
+				{
+					mTaskSignal.notify_all();
+				}
 			}
 
 			inline void ExecuteTask(Task* task)
@@ -92,15 +138,28 @@ namespace cliqCity
 				(task->mKernel)(task->mData);
 			}
 
+			inline void ProcessTasks()
+			{
+				while (mIsProcessingTasks)
+				{
+					Task* task = WaitForAvailableTasks();
+					ExecuteTask(task);
+					FreeTask(task);
+				}
+			}
+
 			inline Task* WaitForAvailableTasks()
 			{
-				Lock lock(mQueueLock);
-				while (!mTasksAvailable) 
+				UniqueLock lock(mQueueLock);
+				while (mTaskQueue.empty()) 
 				{
-					mTaskNotifier.wait(lock);
+					mTaskSignal.wait(lock);
 				}
 
-
+				Task* task = mTaskQueue.front();
+				mTaskQueue.pop();
+				
+				return task;
 			}
 		};
 	}
