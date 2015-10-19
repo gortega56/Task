@@ -2,19 +2,23 @@
 #include "Task.h"
 #include <thread>
 #include <condition_variable>
+#include <mutex>
 
 namespace cliqCity
 {
 	namespace multicore
 	{
-		typedef std::condition_variable Notifier;
-		typedef std::thread Thread;
+		typedef std::condition_variable			Notifier;
+		typedef std::thread						Thread;
+		typedef std::mutex						Mutex;
+		typedef std::unique_lock<Mutex>			Lock;
 
 		template<class Allocator>
 		class TaskDispatcher
 		{
 		public:
 			Notifier	mTaskNotifier;
+			Mutex		mQueueLock;
 			Allocator*	mAllocator;
 			Thread*		mThreads;
 			uint8_t		mThreadCount;
@@ -34,6 +38,14 @@ namespace cliqCity
 			~TaskDispatcher()
 			{
 
+			}
+
+			void Start()
+			{
+				for (int i = 0; i < mThreadCount; i++)
+				{
+					mThreads[i] = Thread::thread(WaitForAvailableTasks);
+				}
 			}
 
 			void SetAllocator(Allocator* allocator)
@@ -71,7 +83,8 @@ namespace cliqCity
 
 			inline void QueueTask(Task* task)
 			{
-				
+				mTasksAvailable = true;
+				mTaskNotifier.notify_all();
 			}
 
 			inline void ExecuteTask(Task* task)
@@ -79,9 +92,15 @@ namespace cliqCity
 				(task->mKernel)(task->mData);
 			}
 
-			inline Task* WaitForAvailableTasks(Thread* thread)
+			inline Task* WaitForAvailableTasks()
 			{
-				while (!mTasksAvailable)
+				Lock lock(mQueueLock);
+				while (!mTasksAvailable) 
+				{
+					mTaskNotifier.wait(lock);
+				}
+
+
 			}
 		};
 	}
