@@ -4,7 +4,7 @@
 #include <sstream>
 
 #define TASK_COUNT		50
-#define THREAD_COUNT	5
+#define THREAD_COUNT	1
 #define TASK_POOL_SIZE	1024
 
 using namespace cliqCity::multicore;
@@ -30,8 +30,7 @@ int main(int argc, int* argv[])
 	time_t now;
 	srand(time(&now));
 
-	char memory[1024];
-	cliqCity::memory::PoolAllocator allocator(memory, memory + TASK_POOL_SIZE, sizeof(Task));
+	char memory[TASK_POOL_SIZE];
 	Thread threads[THREAD_COUNT];
 	TaskData data[TASK_COUNT];
 	int taskNumbers[TASK_COUNT];
@@ -45,7 +44,7 @@ int main(int argc, int* argv[])
 		data[i].mKernelData = &taskNumbers[i];
 	}
 
-	TaskDispatcher<cliqCity::memory::PoolAllocator> dispatchQueue(threads, THREAD_COUNT, memory, TASK_POOL_SIZE);
+	TaskDispatcher dispatchQueue(threads, THREAD_COUNT, memory, TASK_POOL_SIZE);
 	dispatchQueue.Start();
 
 	for (int i = 0; i < TASK_COUNT; i++)

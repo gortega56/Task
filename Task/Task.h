@@ -10,8 +10,9 @@ namespace cliqCity
 		struct TaskID
 		{
 			uint32_t mOffset;
-			
-			TaskID(uint32_t offset) : mOffset(offset) {};
+			uint32_t mGeneration;
+
+			TaskID(uint32_t offset, uint32_t generation) : mOffset(offset), mGeneration(generation) {};
 		};
 
 		struct TaskData
@@ -24,12 +25,13 @@ namespace cliqCity
 		class Task
 		{
 		public:
-			TaskID		mID;
+			char		mAlias[sizeof(void*)];
+			uint32_t	mGeneration;
 			TaskData	mData;
 			TaskKernel	mKernel;
 
-			Task();
-			~Task();
+			Task() {};
+			~Task() {};
 		};
 	}
 }
