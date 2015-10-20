@@ -4,7 +4,7 @@
 #include <sstream>
 
 #define TASK_COUNT		50
-#define THREAD_COUNT	1
+#define THREAD_COUNT	5
 #define TASK_POOL_SIZE	1024
 
 using namespace cliqCity::multicore;
@@ -51,6 +51,7 @@ int main(int argc, int* argv[])
 	{
 		dispatchQueue.AddTask(data[i], PrintTask);
 	}
+
 
 	getchar();
 }
