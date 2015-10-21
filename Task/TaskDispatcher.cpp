@@ -62,9 +62,9 @@ bool TaskDispatcher::IsProcessing()
 
 TaskID TaskDispatcher::AddTask(const TaskData& data, TaskKernel kernel)
 {
-	Task* task = AllocateTask();
-	task->mData = data;
-	task->mKernel = kernel;
+	Task* task		= AllocateTask();
+	task->mData		= data;
+	task->mKernel	= kernel;
 
 	TaskID taskID = GetTaskID(task);
 
@@ -94,6 +94,20 @@ bool TaskDispatcher::IsTaskFinished(const TaskID& taskID) const
 	}
 
 	return false;
+}
+
+inline Task* TaskDispatcher::WaitForAvailableTasks()
+{
+	UniqueLock lock(mQueueLock);
+	while (mTaskQueue.empty())
+	{
+		mTaskSignal.wait(lock);
+	}
+
+	Task* task = mTaskQueue.front();
+	mTaskQueue.pop();
+
+	return task;
 }
 
 inline Task* TaskDispatcher::AllocateTask()
@@ -143,20 +157,6 @@ inline void TaskDispatcher::ProcessTasks()
 		ExecuteTask(task);
 		FreeTask(task);
 	}
-}
-
-inline Task* TaskDispatcher::WaitForAvailableTasks()
-{
-	UniqueLock lock(mQueueLock);
-	while (mTaskQueue.empty())
-	{
-		mTaskSignal.wait(lock);
-	}
-
-	Task* task = mTaskQueue.front();
-	mTaskQueue.pop();
-
-	return task;
 }
 
 inline TaskID TaskDispatcher::GetTaskID(Task* task) const

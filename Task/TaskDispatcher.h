@@ -23,8 +23,6 @@ namespace cliqCity
 		class TaskDispatcher
 		{
 		public:
-			
-			
 			TaskDispatcher(Thread* threads, uint8_t threadCount, void* memory, size_t size);
 			TaskDispatcher();
 			~TaskDispatcher();
@@ -54,12 +52,12 @@ namespace cliqCity
 			 TaskID	GetTaskID(Task* task) const;
 			 Task*	GetTask(const TaskID& taskID) const;
 
+			 Task*	WaitForAvailableTasks();
 			 Task*	AllocateTask();
 			 void	FreeTask(Task* task);
 			 void	QueueTask(Task* task);
 			 void	ExecuteTask(Task* task);
 			 void	ProcessTasks();
-			 Task*	WaitForAvailableTasks();
 		};
 	}
 }
