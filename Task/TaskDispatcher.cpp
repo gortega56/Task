@@ -110,7 +110,7 @@ inline Task* TaskDispatcher::AllocateTask()
 
 inline void TaskDispatcher::FreeTask(Task* task)
 {
-	task->mGeneration = -1;
+	task->mGeneration = ++mTaskGeneration;
 	{
 		ScopedLock lock(mMemoryLock);
 		mAllocator.Free(task);
