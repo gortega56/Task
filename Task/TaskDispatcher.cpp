@@ -20,6 +20,7 @@ TaskDispatcher::TaskDispatcher() : TaskDispatcher(nullptr, 0, nullptr, 0)
 
 TaskDispatcher::~TaskDispatcher()
 {
+	mIsProcessingTasks = false;
 	Synchronize();
 	mThreads = nullptr;
 }
@@ -65,9 +66,34 @@ TaskID TaskDispatcher::AddTask(const TaskData& data, TaskKernel kernel)
 	task->mData = data;
 	task->mKernel = kernel;
 
+	TaskID taskID = GetTaskID(task);
+
 	QueueTask(task);
 
-	return GetTaskID(task);
+	return taskID;
+}
+
+void TaskDispatcher::WaitForTask(const TaskID& taskID) const
+{
+	while (!IsTaskFinished(taskID))
+	{
+		std::this_thread::yield();
+	}
+}
+
+bool TaskDispatcher::IsTaskFinished(const TaskID& taskID) const
+{
+	Task* task = GetTask(taskID);
+	if (task->mGeneration != taskID.mGeneration)
+	{
+		return true;
+	}
+	else
+	{
+		// TO DO: Check dependent tasks.
+	}
+
+	return false;
 }
 
 inline Task* TaskDispatcher::AllocateTask()
@@ -84,7 +110,7 @@ inline Task* TaskDispatcher::AllocateTask()
 
 inline void TaskDispatcher::FreeTask(Task* task)
 {
-	task->mGeneration = ++mTaskGeneration;
+	task->mGeneration = -1;
 	{
 		ScopedLock lock(mMemoryLock);
 		mAllocator.Free(task);

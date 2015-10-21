@@ -30,7 +30,7 @@ namespace cliqCity
 			TaskData	mData;
 			TaskKernel	mKernel;
 
-			Task() {};
+			Task() : mGeneration(0), mKernel(nullptr) {};
 			~Task() {};
 		};
 	}

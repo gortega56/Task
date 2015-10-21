@@ -34,9 +34,12 @@ namespace cliqCity
 			void Synchronize();
 			bool IsProcessing();
 
-			TaskID AddTask(const TaskData& data, TaskKernel kernel);
+			TaskID  AddTask(const TaskData& data, TaskKernel kernel);
 
-		 private:
+			void WaitForTask(const TaskID& taskID) const;
+			bool IsTaskFinished(const TaskID& taskID) const;
+
+		private:
 			 AtomicCounter	mTaskGeneration;
 			 Signal			mTaskSignal;
 			 Mutex			mMemoryLock;

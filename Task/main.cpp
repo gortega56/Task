@@ -47,11 +47,16 @@ int main(int argc, int* argv[])
 	TaskDispatcher dispatchQueue(threads, THREAD_COUNT, memory, TASK_POOL_SIZE);
 	dispatchQueue.Start();
 
-	for (int i = 0; i < TASK_COUNT; i++)
-	{
-		dispatchQueue.AddTask(data[i], PrintTask);
-	}
 
+	while (true)
+	{
+		for (int i = 0; i < TASK_COUNT; i++)
+		{
+			TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+			dispatchQueue.WaitForTask(taskID);
+		}
+	}
+	
 
 	getchar();
 }
