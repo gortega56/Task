@@ -41,13 +41,7 @@ TaskDispatcher::~TaskDispatcher()
 	}
 
 	// Finally join threads
-	for (int i = 0; i < mThreadCount; i++)
-	{
-		if (mThreads[i].joinable())
-		{
-			mThreads[i].join();
-		}
-	}
+	JoinThreads();
 
 	mThreads = nullptr;
 }
@@ -69,6 +63,35 @@ void TaskDispatcher::Start()
 void TaskDispatcher::Pause()
 {
 	mIsPaused = true;
+
+	bool tasksPending;
+	{
+		ScopedLock lock(mPendingQueueLock);
+		tasksPending = !mPendingQueue.empty();
+	}
+
+	if (!tasksPending)
+	{
+		// Pump queue with empty tasks to force thread exit.
+		for (int i = 0; i < mThreadCount; i++)
+		{
+			TaskID taskID = AddTask(emptyTaskData, EmptyKernel, true);
+			WaitForTask(taskID);
+		}
+	}
+
+	// Finally join threads
+	JoinThreads();
+}
+
+bool TaskDispatcher::IsPaused()
+{
+	return mIsPaused;
+}
+
+TaskID TaskDispatcher::AddTask(const TaskData& data, TaskKernel kernel)
+{
+	return AddTask(data, kernel, !mIsPaused);
 }
 
 void TaskDispatcher::Synchronize()
@@ -100,29 +123,6 @@ void TaskDispatcher::Synchronize()
 	}
 }
 
-bool TaskDispatcher::IsPaused()
-{
-	return mIsPaused;
-}
-
-TaskID TaskDispatcher::AddTask(const TaskData& data, TaskKernel kernel)
-{
-	return AddTask(data, kernel, !mIsPaused);
-}
-
-inline TaskID TaskDispatcher::AddTask(const TaskData& data, TaskKernel kernel, bool notify)
-{
-	Task* task = AllocateTask();
-	task->mData = data;
-	task->mKernel = kernel;
-
-	TaskID taskID = GetTaskID(task);
-
-	QueueTask(task, notify);
-
-	return taskID;
-}
-
 void TaskDispatcher::WaitForTask(const TaskID& taskID) const
 {
 	while (!IsTaskFinished(taskID))
@@ -145,6 +145,29 @@ bool TaskDispatcher::IsTaskFinished(const TaskID& taskID) const
 	}
 
 	return false;
+}
+
+inline TaskID TaskDispatcher::AddTask(const TaskData& data, TaskKernel kernel, bool notify)
+{
+	Task* task = AllocateTask();
+	task->mData = data;
+	task->mKernel = kernel;
+
+	TaskID taskID = GetTaskID(task);
+
+	QueueTask(task, notify);
+
+	return taskID;
+}
+
+inline TaskID TaskDispatcher::GetTaskID(Task* task) const
+{
+	return TaskID(task - reinterpret_cast<Task*>(mMemory), task->mGeneration);
+}
+
+inline Task* TaskDispatcher::GetTask(const TaskID& taskID) const
+{
+	return reinterpret_cast<Task*>(mMemory) + taskID.mOffset;
 }
 
 inline Task* TaskDispatcher::WaitForAvailableTasks()
@@ -221,18 +244,13 @@ inline void TaskDispatcher::ProcessTasks()
 	}
 }
 
-inline TaskID TaskDispatcher::GetTaskID(Task* task) const
+inline void TaskDispatcher::JoinThreads()
 {
-	return TaskID(task - reinterpret_cast<Task*>(mMemory), task->mGeneration);
+	for (int i = 0; i < mThreadCount; i++)
+	{
+		if (mThreads[i].joinable())
+		{
+			mThreads[i].join();
+		}
+	}
 }
-
-inline Task* TaskDispatcher::GetTask(const TaskID& taskID) const
-{
-	return reinterpret_cast<Task*>(mMemory) + taskID.mOffset;
-}
-
-void TaskDispatcher::JoinThreads()
-{
-	
-}
-

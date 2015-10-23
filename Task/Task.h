@@ -18,6 +18,8 @@ namespace cliqCity
 		struct TaskData
 		{
 			void* mKernelData;
+
+			TaskData() : mKernelData(nullptr) {};
 		};
 
 		typedef void(*TaskKernel)(const TaskData&);

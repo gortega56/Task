@@ -80,22 +80,24 @@ int main(int argc, int* argv[])
 		}
 	}
 
+	printf("Start and Stop Test: %i Tasks %i Threads\n", TASK_COUNT, THREAD_COUNT);
+
+	int i;
+	for (i = 0; i < TASK_COUNT / 2; i++)
+	{
+		TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+	}
+
+	dispatchQueue.Pause();
+
+	printf("Pausing Queue\n");
+
+	for (i; i < TASK_COUNT; i++)
+	{
+		TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+	}
+
+	dispatchQueue.Start();
+
 	getchar();
-
-	//printf("Start and Stop Test: %i Tasks %i Threads", TASK_COUNT, THREAD_COUNT);
-
-	//int i;
-	//for (i = 0; i < TASK_COUNT / 2; i++)
-	//{
-	//	TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
-	//}
-
-	//dispatchQueue.Pause();
-
-	//for (i; i < TASK_COUNT; i++)
-	//{
-	//	TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
-	//}
-
-	//dispatchQueue.Start();
 }

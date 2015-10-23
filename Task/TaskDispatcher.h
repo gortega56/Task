@@ -52,7 +52,7 @@ namespace cliqCity
 			uint8_t			mThreadCount;
 			bool			mIsPaused;
 
-			TaskID AddTask(const TaskData& data, TaskKernel kernel, bool notify);
+			TaskID	AddTask(const TaskData& data, TaskKernel kernel, bool notify);
 			TaskID	GetTaskID(Task* task) const;
 			Task*	GetTask(const TaskID& taskID) const;
 
