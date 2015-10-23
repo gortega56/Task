@@ -3,9 +3,11 @@
 #include <stdio.h>
 #include <sstream>
 
-#define TASK_COUNT		50
-#define THREAD_COUNT	5
-#define TASK_POOL_SIZE	1024
+#define TASK_COUNT				50
+#define THREAD_COUNT			5
+#define TASK_POOL_SIZE			1024
+#define SYNCHRONIZATION_RATE	10
+#define SERIAL_LOOP_COUNT		50
 
 using namespace cliqCity::multicore;
 
@@ -29,7 +31,7 @@ int main(int argc, int* argv[])
 {
 	time_t now;
 	srand(time(&now));
-
+	
 	char memory[TASK_POOL_SIZE];
 	Thread threads[THREAD_COUNT];
 	TaskData data[TASK_COUNT];
@@ -47,8 +49,29 @@ int main(int argc, int* argv[])
 	TaskDispatcher dispatchQueue(threads, THREAD_COUNT, memory, TASK_POOL_SIZE);
 	dispatchQueue.Start();
 
+	printf("Concurrency Test: %i Tasks %i Threads\n", TASK_COUNT, THREAD_COUNT);
 
-	while (true)
+	for (int i = 0; i < TASK_COUNT; i++)
+	{
+		TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+	}
+
+	dispatchQueue.Synchronize();
+
+	printf("Synchronization Test: %i Tasks %i Threads Synchronization Rate %i\n", TASK_COUNT, THREAD_COUNT, SYNCHRONIZATION_RATE);
+
+	for (int i = 0; i < TASK_COUNT; i++)
+	{
+		TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+		if ((i + 1) % SYNCHRONIZATION_RATE == 0)
+		{
+			dispatchQueue.Synchronize();
+		}
+	}
+
+	printf("Serial Wait Test: %i Tasks %i Threads Loops %i\n", TASK_COUNT, THREAD_COUNT, SERIAL_LOOP_COUNT);
+
+	for (int j = 0; j < SERIAL_LOOP_COUNT; j++)
 	{
 		for (int i = 0; i < TASK_COUNT; i++)
 		{
@@ -56,7 +79,23 @@ int main(int argc, int* argv[])
 			dispatchQueue.WaitForTask(taskID);
 		}
 	}
-	
 
 	getchar();
+
+	//printf("Start and Stop Test: %i Tasks %i Threads", TASK_COUNT, THREAD_COUNT);
+
+	//int i;
+	//for (i = 0; i < TASK_COUNT / 2; i++)
+	//{
+	//	TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+	//}
+
+	//dispatchQueue.Pause();
+
+	//for (i; i < TASK_COUNT; i++)
+	//{
+	//	TaskID taskID = dispatchQueue.AddTask(data[i], PrintTask);
+	//}
+
+	//dispatchQueue.Start();
 }

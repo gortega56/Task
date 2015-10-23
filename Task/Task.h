@@ -19,7 +19,7 @@ namespace cliqCity
 		{
 			void* mKernelData;
 		};
-		
+
 		typedef void(*TaskKernel)(const TaskData&);
 		
 		class Task
