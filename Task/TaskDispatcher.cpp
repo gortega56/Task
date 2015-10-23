@@ -33,16 +33,6 @@ TaskDispatcher::~TaskDispatcher()
 	// Pause queue so threads will exit upon completion.
 	Pause();
 
-	// Pump queue with empty tasks to force thread exit.
-	for (int i = 0; i < mThreadCount; i++)
-	{
-		TaskID taskID = AddTask(emptyTaskData, EmptyKernel, true);
-		WaitForTask(taskID);
-	}
-
-	// Finally join threads
-	JoinThreads();
-
 	mThreads = nullptr;
 }
 
