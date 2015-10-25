@@ -13,6 +13,7 @@ namespace cliqCity
 			uint32_t mGeneration;
 
 			TaskID(uint32_t offset, uint32_t generation) : mOffset(offset), mGeneration(generation) {};
+			TaskID() : TaskID(0, 0) {};
 		};
 
 		struct TaskData

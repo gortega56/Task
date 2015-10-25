@@ -21,7 +21,7 @@ PoolAllocator::PoolAllocator(void* start, void* end, size_t elementSize) : mNext
 	asChar += elementSize;
 
 	Node* iterator = mNext;
-	for (int i = 1; i < elementCount; i++)
+	for (int i = 1; i < static_cast<int>(elementCount); i++)
 	{
 		iterator->mNext	= asNode;
 		iterator		= iterator->mNext;

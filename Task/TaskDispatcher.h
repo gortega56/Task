@@ -19,7 +19,6 @@ namespace cliqCity
 		typedef std::lock_guard<Mutex>			ScopedLock;
 		typedef std::thread						Thread;
 		typedef std::queue<Task*>				TaskQueue;
-		typedef std::queue<TaskID>				TaskIDQueue;
 
 		class TaskDispatcher
 		{
@@ -32,7 +31,7 @@ namespace cliqCity
 			void Pause();
 			bool IsPaused();
 
-			TaskID  AddTask(const TaskData& data, TaskKernel kernel);
+			TaskID AddTask(const TaskData& data, TaskKernel kernel);
 
 			void Synchronize();
 			void WaitForTask(const TaskID& taskID) const;
@@ -42,24 +41,21 @@ namespace cliqCity
 			AtomicCounter	mTaskGeneration;
 			Signal			mTaskSignal;
 			Mutex			mMemoryLock;
-			Mutex			mPendingQueueLock;
-			Mutex			mRunningQueueLock;
-			TaskQueue		mPendingQueue;
-			TaskIDQueue		mRunningQueue;
+			Mutex			mTaskQueueLock;
+			TaskQueue		mTaskQueue;
 			TaskPool		mAllocator;
 			void*			mMemory;
 			Thread*			mThreads;
 			uint8_t			mThreadCount;
 			bool			mIsPaused;
 
-			TaskID	AddTask(const TaskData& data, TaskKernel kernel, bool notify);
 			TaskID	GetTaskID(Task* task) const;
 			Task*	GetTask(const TaskID& taskID) const;
 
 			Task*	WaitForAvailableTasks();
 			Task*	AllocateTask();
 			void	FreeTask(Task* task);
-			void	QueueTask(Task* task, bool notify);
+			void	QueueTask(Task* task);
 			void	ExecuteTask(Task* task);
 			void	ProcessTasks();
 			void	JoinThreads();

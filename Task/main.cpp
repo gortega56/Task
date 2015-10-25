@@ -30,7 +30,7 @@ void PrintTask(const TaskData& data)
 int main(int argc, int* argv[])
 {
 	time_t now;
-	srand(time(&now));
+	srand(static_cast<int>(time(&now)));
 	
 	char memory[TASK_POOL_SIZE];
 	Thread threads[THREAD_COUNT];
